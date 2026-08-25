@@ -53,10 +53,37 @@ export default function AdminPage() {
   const [productForm, setProductForm] = useState(emptyProductForm);
   const [variants, setVariants] = useState<VariantFormRow[]>([]);
 
+  const [productSearch, setProductSearch] = useState("");
+  const [productCategoryId, setProductCategoryId] = useState("");
+  const [productMinPrice, setProductMinPrice] = useState("");
+  const [productMaxPrice, setProductMaxPrice] = useState("");
+  const [productSort, setProductSort] = useState("name_asc");
+
+  const [orderSearch, setOrderSearch] = useState("");
+  const [orderCity, setOrderCity] = useState("");
+  const [orderMinTotal, setOrderMinTotal] = useState("");
+  const [orderMaxTotal, setOrderMaxTotal] = useState("");
+
   const [loginAdmin, { isLoading: loggingIn }] = useLoginAdminMutation();
   const { data: categories } = useGetCategoriesQuery(undefined, { skip: !authed });
+
+  const productQueryArgs = useMemo(() => {
+    const min = productMinPrice.trim() ? Number(productMinPrice) : undefined;
+    const max = productMaxPrice.trim() ? Number(productMaxPrice) : undefined;
+
+    return {
+      page: 1,
+      pageSize: 100,
+      sort: productSort,
+      search: productSearch.trim() || undefined,
+      categoryId: productCategoryId ? Number(productCategoryId) : undefined,
+      minPrice: min != null && !Number.isNaN(min) ? min : undefined,
+      maxPrice: max != null && !Number.isNaN(max) ? max : undefined,
+    };
+  }, [productSearch, productCategoryId, productMinPrice, productMaxPrice, productSort]);
+
   const { data: productsData, isLoading: productsLoading } = useGetProductsQuery(
-    { page: 1, pageSize: 100 },
+    productQueryArgs,
     { skip: !authed },
   );
   const {
@@ -81,6 +108,36 @@ export default function AdminPage() {
     () => (categories ? flattenCategoryOptions(categories) : []),
     [categories],
   );
+
+  const filteredOrders = useMemo(() => {
+    if (!orders) return [];
+
+    const term = orderSearch.trim().toLowerCase();
+    const cityTerm = orderCity.trim().toLowerCase();
+    const min = orderMinTotal.trim() ? Number(orderMinTotal) : undefined;
+    const max = orderMaxTotal.trim() ? Number(orderMaxTotal) : undefined;
+
+    return orders.filter((order) => {
+      const haystack = [
+        order.firstName,
+        order.lastName,
+        order.personalNumber,
+        order.address,
+        order.city,
+        order.comment ?? "",
+        String(order.id),
+        ...order.items.map((item) => item.productName),
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      if (term && !haystack.includes(term)) return false;
+      if (cityTerm && !order.city.toLowerCase().includes(cityTerm)) return false;
+      if (min != null && !Number.isNaN(min) && order.totalAmount < min) return false;
+      if (max != null && !Number.isNaN(max) && order.totalAmount > max) return false;
+      return true;
+    });
+  }, [orders, orderSearch, orderCity, orderMinTotal, orderMaxTotal]);
 
   const handleLogin = async (event: FormEvent) => {
     event.preventDefault();
@@ -120,14 +177,20 @@ export default function AdminPage() {
   };
 
   const handleDeleteCategory = async (id: number, name: string) => {
-    if (!window.confirm(`Delete category “${name}”?`)) return;
+    if (
+      !window.confirm(
+        `Delete category “${name}”? This also deletes all subcategories and products inside them.`,
+      )
+    ) {
+      return;
+    }
     setMessage(null);
 
     try {
       await deleteCategory(id).unwrap();
-      setMessage("Category deleted.");
+      setMessage("Category deleted (including nested categories and products).");
     } catch {
-      setMessage("Could not delete category. Remove children/products first.");
+      setMessage("Could not delete category.");
     }
   };
 
@@ -307,6 +370,57 @@ export default function AdminPage() {
             </button>
           </div>
 
+          <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <label className="block text-sm sm:col-span-2 lg:col-span-1">
+              <span className="mb-1 block text-xs uppercase tracking-[0.12em] text-ink-soft">
+                Search
+              </span>
+              <input
+                value={orderSearch}
+                onChange={(event) => setOrderSearch(event.target.value)}
+                placeholder="Name, product, personal no…"
+                className="w-full border border-line bg-paper px-3 py-2 outline-none focus:border-ink"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="mb-1 block text-xs uppercase tracking-[0.12em] text-ink-soft">
+                City
+              </span>
+              <input
+                value={orderCity}
+                onChange={(event) => setOrderCity(event.target.value)}
+                placeholder="Filter by city"
+                className="w-full border border-line bg-paper px-3 py-2 outline-none focus:border-ink"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="mb-1 block text-xs uppercase tracking-[0.12em] text-ink-soft">
+                Min total
+              </span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={orderMinTotal}
+                onChange={(event) => setOrderMinTotal(event.target.value)}
+                className="w-full border border-line bg-paper px-3 py-2 outline-none focus:border-ink"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="mb-1 block text-xs uppercase tracking-[0.12em] text-ink-soft">
+                Max total
+              </span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={orderMaxTotal}
+                onChange={(event) => setOrderMaxTotal(event.target.value)}
+                className="w-full border border-line bg-paper px-3 py-2 outline-none focus:border-ink"
+              />
+            </label>
+          </div>
+
           {ordersLoading && <p className="text-sm text-ink-soft">Loading orders…</p>}
           {ordersError && (
             <p className="text-sm text-danger">
@@ -316,9 +430,12 @@ export default function AdminPage() {
           {!ordersLoading && orders && orders.length === 0 && (
             <p className="text-sm text-ink-soft">No orders yet.</p>
           )}
+          {!ordersLoading && orders && orders.length > 0 && filteredOrders.length === 0 && (
+            <p className="text-sm text-ink-soft">No orders match these filters.</p>
+          )}
 
           <ul className="space-y-4">
-            {orders?.map((order) => {
+            {filteredOrders.map((order) => {
               const expanded = expandedOrderId === order.id;
               return (
                 <li key={order.id} className="border-b border-line/70 pb-4">
@@ -682,7 +799,83 @@ export default function AdminPage() {
 
           <div className="border border-line p-5">
             <h2 className="mb-4 font-display text-2xl">Catalog</h2>
+
+            <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <label className="block text-sm sm:col-span-2">
+                <span className="mb-1 block text-xs uppercase tracking-[0.12em] text-ink-soft">
+                  Search
+                </span>
+                <input
+                  value={productSearch}
+                  onChange={(event) => setProductSearch(event.target.value)}
+                  placeholder="Name, description, category…"
+                  className="w-full border border-line bg-paper px-3 py-2 outline-none focus:border-ink"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="mb-1 block text-xs uppercase tracking-[0.12em] text-ink-soft">
+                  Category
+                </span>
+                <select
+                  value={productCategoryId}
+                  onChange={(event) => setProductCategoryId(event.target.value)}
+                  className="w-full border border-line bg-paper px-3 py-2 outline-none focus:border-ink"
+                >
+                  <option value="">All categories</option>
+                  {categoryOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-sm">
+                <span className="mb-1 block text-xs uppercase tracking-[0.12em] text-ink-soft">
+                  Min price
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={productMinPrice}
+                  onChange={(event) => setProductMinPrice(event.target.value)}
+                  className="w-full border border-line bg-paper px-3 py-2 outline-none focus:border-ink"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="mb-1 block text-xs uppercase tracking-[0.12em] text-ink-soft">
+                  Max price
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={productMaxPrice}
+                  onChange={(event) => setProductMaxPrice(event.target.value)}
+                  className="w-full border border-line bg-paper px-3 py-2 outline-none focus:border-ink"
+                />
+              </label>
+              <label className="block text-sm sm:col-span-2 lg:col-span-2">
+                <span className="mb-1 block text-xs uppercase tracking-[0.12em] text-ink-soft">
+                  Sort
+                </span>
+                <select
+                  value={productSort}
+                  onChange={(event) => setProductSort(event.target.value)}
+                  className="w-full border border-line bg-paper px-3 py-2 outline-none focus:border-ink"
+                >
+                  <option value="name_asc">Name A–Z</option>
+                  <option value="name_desc">Name Z–A</option>
+                  <option value="price_asc">Price: low to high</option>
+                  <option value="price_desc">Price: high to low</option>
+                </select>
+              </label>
+            </div>
+
             {productsLoading && <p className="text-sm text-ink-soft">Loading products…</p>}
+            {!productsLoading && productsData && productsData.items.length === 0 && (
+              <p className="text-sm text-ink-soft">No products match these filters.</p>
+            )}
             <ul className="space-y-4">
               {productsData?.items.map((product) => (
                 <li

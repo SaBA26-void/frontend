@@ -81,7 +81,7 @@ export const onlineShopApi = createApi({
         url: `/api/categories/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Categories"],
+      invalidatesTags: ["Categories", { type: "Products", id: "LIST" }],
     }),
     getProducts: builder.query<PagedProductsDto, GetProductsParams | void>({
       query: (params) => {
@@ -96,6 +96,18 @@ export const onlineShopApi = createApi({
 
         if (params?.categoryId != null) {
           searchParams.set("categoryId", String(params.categoryId));
+        }
+
+        if (params?.search?.trim()) {
+          searchParams.set("search", params.search.trim());
+        }
+
+        if (params?.minPrice != null && !Number.isNaN(params.minPrice)) {
+          searchParams.set("minPrice", String(params.minPrice));
+        }
+
+        if (params?.maxPrice != null && !Number.isNaN(params.maxPrice)) {
+          searchParams.set("maxPrice", String(params.maxPrice));
         }
 
         return `/api/products?${searchParams.toString()}`;
