@@ -72,6 +72,8 @@ export interface GetProductsParams {
   categoryId?: number;
   page?: number;
   pageSize?: number;
+  /** name_asc | name_desc | price_asc | price_desc */
+  sort?: string;
 }
 
 export interface CreateOrderItemDto {

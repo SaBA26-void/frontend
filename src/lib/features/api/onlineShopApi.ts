@@ -88,9 +88,11 @@ export const onlineShopApi = createApi({
         const searchParams = new URLSearchParams();
         const page = params?.page ?? 1;
         const pageSize = params?.pageSize ?? 10;
+        const sort = params?.sort ?? "name_asc";
 
         searchParams.set("page", String(page));
         searchParams.set("pageSize", String(pageSize));
+        searchParams.set("sort", sort);
 
         if (params?.categoryId != null) {
           searchParams.set("categoryId", String(params.categoryId));

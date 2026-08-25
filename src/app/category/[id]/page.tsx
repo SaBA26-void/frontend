@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { ProductTile } from "@/components/ProductTile";
 import {
@@ -10,11 +10,20 @@ import {
 } from "@/lib/features/api/onlineShopApi";
 import { findCategoryById } from "@/lib/utils";
 
+const SORT_OPTIONS = [
+  { value: "name_asc", label: "Name A–Z" },
+  { value: "name_desc", label: "Name Z–A" },
+  { value: "price_asc", label: "Price: low to high" },
+  { value: "price_desc", label: "Price: high to low" },
+] as const;
+
 function CategoryPageContent() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const categoryId = Number(params.id);
   const page = Number(searchParams.get("page") ?? "1") || 1;
+  const sort = searchParams.get("sort") ?? "name_asc";
   const pageSize = 8;
 
   const { data: categories } = useGetCategoriesQuery();
@@ -24,7 +33,7 @@ function CategoryPageContent() {
     isError,
     isFetching,
   } = useGetProductsQuery(
-    { categoryId, page, pageSize },
+    { categoryId, page, pageSize, sort },
     { skip: !Number.isFinite(categoryId) || categoryId < 1 },
   );
 
@@ -36,6 +45,17 @@ function CategoryPageContent() {
   const totalPages = products
     ? Math.max(1, Math.ceil(products.totalCount / products.pageSize))
     : 1;
+
+  const buildCategoryHref = (nextPage: number, nextSort = sort) => {
+    const query = new URLSearchParams();
+    query.set("page", String(nextPage));
+    query.set("sort", nextSort);
+    return `/category/${categoryId}?${query.toString()}`;
+  };
+
+  const onSortChange = (nextSort: string) => {
+    router.push(buildCategoryHref(1, nextSort));
+  };
 
   if (!Number.isFinite(categoryId) || categoryId < 1) {
     return (
@@ -82,10 +102,29 @@ function CategoryPageContent() {
 
       {products && products.items.length > 0 && (
         <>
-          <p className="mb-6 text-sm text-ink-soft">
-            {products.totalCount} product{products.totalCount === 1 ? "" : "s"}
-            {isFetching ? " · Updating…" : ""}
-          </p>
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+            <p className="text-sm text-ink-soft">
+              {products.totalCount} product{products.totalCount === 1 ? "" : "s"}
+              {isFetching ? " · Updating…" : ""}
+            </p>
+            <label className="flex items-center gap-2 text-sm">
+              <span className="text-xs uppercase tracking-[0.12em] text-ink-soft">
+                Sort
+              </span>
+              <select
+                value={sort}
+                onChange={(event) => onSortChange(event.target.value)}
+                className="border border-line bg-paper px-3 py-2 outline-none focus:border-ink"
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
           <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4 md:gap-x-6">
             {products.items.map((product, index) => (
               <ProductTile key={product.id} product={product} index={index} />
@@ -95,7 +134,7 @@ function CategoryPageContent() {
           {totalPages > 1 && (
             <div className="mt-12 flex items-center justify-center gap-3">
               <Link
-                href={`/category/${categoryId}?page=${Math.max(1, page - 1)}`}
+                href={buildCategoryHref(Math.max(1, page - 1))}
                 aria-disabled={page <= 1}
                 className={`border border-line px-4 py-2 text-sm uppercase tracking-[0.12em] ${
                   page <= 1 ? "pointer-events-none opacity-40" : "hover:border-ink"
@@ -107,7 +146,7 @@ function CategoryPageContent() {
                 Page {page} of {totalPages}
               </span>
               <Link
-                href={`/category/${categoryId}?page=${Math.min(totalPages, page + 1)}`}
+                href={buildCategoryHref(Math.min(totalPages, page + 1))}
                 aria-disabled={page >= totalPages}
                 className={`border border-line px-4 py-2 text-sm uppercase tracking-[0.12em] ${
                   page >= totalPages
