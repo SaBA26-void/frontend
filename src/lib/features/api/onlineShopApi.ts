@@ -25,7 +25,7 @@ export const onlineShopApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ["Categories", "Products", "Product"],
+  tagTypes: ["Categories", "Products", "Product", "Orders"],
   endpoints: (builder) => ({
     loginAdmin: builder.mutation<{ message: string }, { password: string }>({
       query: (body) => ({
@@ -33,6 +33,18 @@ export const onlineShopApi = createApi({
         method: "POST",
         body,
       }),
+    }),
+    getOrders: builder.query<OrderDto[], void>({
+      query: () => "/api/orders",
+      providesTags: ["Orders"],
+    }),
+    createOrder: builder.mutation<OrderDto, CreateOrderDto>({
+      query: (body) => ({
+        url: "/api/orders",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Orders"],
     }),
     getCategories: builder.query<CategoryDto[], void>({
       query: () => "/api/categories",
@@ -120,18 +132,13 @@ export const onlineShopApi = createApi({
         { type: "Products", id: "LIST" },
       ],
     }),
-    createOrder: builder.mutation<OrderDto, CreateOrderDto>({
-      query: (body) => ({
-        url: "/api/orders",
-        method: "POST",
-        body,
-      }),
-    }),
   }),
 });
 
 export const {
   useLoginAdminMutation,
+  useGetOrdersQuery,
+  useCreateOrderMutation,
   useGetCategoriesQuery,
   useCreateCategoryMutation,
   useUpdateCategoryMutation,
@@ -141,5 +148,4 @@ export const {
   useCreateProductMutation,
   useUpdateProductMutation,
   useDeleteProductMutation,
-  useCreateOrderMutation,
 } = onlineShopApi;

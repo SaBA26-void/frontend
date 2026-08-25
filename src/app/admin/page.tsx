@@ -12,6 +12,7 @@ import {
   useDeleteCategoryMutation,
   useDeleteProductMutation,
   useGetCategoriesQuery,
+  useGetOrdersQuery,
   useGetProductsQuery,
   useLoginAdminMutation,
   useUpdateProductMutation,
@@ -19,7 +20,7 @@ import {
 import { flattenCategoryOptions, formatPrice } from "@/lib/utils";
 import type { ProductDto, ProductVariantInputDto } from "@/types/api";
 
-type Tab = "categories" | "products";
+type Tab = "orders" | "categories" | "products";
 
 interface VariantFormRow {
   size: string;
@@ -40,8 +41,9 @@ export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("products");
+  const [tab, setTab] = useState<Tab>("orders");
   const [message, setMessage] = useState<string | null>(null);
+  const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
 
   const [categoryName, setCategoryName] = useState("");
   const [parentCategoryId, setParentCategoryId] = useState("");
@@ -56,6 +58,12 @@ export default function AdminPage() {
     { page: 1, pageSize: 100 },
     { skip: !authed },
   );
+  const {
+    data: orders,
+    isLoading: ordersLoading,
+    isError: ordersError,
+    refetch: refetchOrders,
+  } = useGetOrdersQuery(undefined, { skip: !authed });
 
   const [createCategory, { isLoading: creatingCategory }] = useCreateCategoryMutation();
   const [deleteCategory] = useDeleteCategoryMutation();
@@ -237,7 +245,7 @@ export default function AdminPage() {
         <div>
           <h1 className="font-display text-4xl tracking-tight sm:text-5xl">Admin panel</h1>
           <p className="mt-2 text-sm text-ink-soft">
-            Manage categories, subcategories, products, and size/color options.
+            Manage orders, categories, products, and size/color options.
           </p>
         </div>
         <button
@@ -249,8 +257,8 @@ export default function AdminPage() {
         </button>
       </div>
 
-      <div className="mb-6 flex gap-2">
-        {(["products", "categories"] as Tab[]).map((item) => (
+      <div className="mb-6 flex flex-wrap gap-2">
+        {(["orders", "products", "categories"] as Tab[]).map((item) => (
           <button
             key={item}
             type="button"
@@ -265,6 +273,103 @@ export default function AdminPage() {
       </div>
 
       {message && <p className="mb-6 text-sm text-moss">{message}</p>}
+
+      {tab === "orders" && (
+        <section className="border border-line p-5">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-display text-2xl">Delivery orders</h2>
+              <p className="text-sm text-ink-soft">
+                Customer checkout submissions with delivery details.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => refetchOrders()}
+              className="border border-line px-3 py-1.5 text-xs uppercase tracking-[0.12em] hover:border-ink"
+            >
+              Refresh
+            </button>
+          </div>
+
+          {ordersLoading && <p className="text-sm text-ink-soft">Loading orders…</p>}
+          {ordersError && (
+            <p className="text-sm text-danger">
+              Could not load orders. Sign in again if your session expired.
+            </p>
+          )}
+          {!ordersLoading && orders && orders.length === 0 && (
+            <p className="text-sm text-ink-soft">No orders yet.</p>
+          )}
+
+          <ul className="space-y-4">
+            {orders?.map((order) => {
+              const expanded = expandedOrderId === order.id;
+              return (
+                <li key={order.id} className="border-b border-line/70 pb-4">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExpandedOrderId(expanded ? null : order.id)
+                    }
+                    className="flex w-full flex-wrap items-start justify-between gap-3 text-left"
+                  >
+                    <div>
+                      <p className="font-medium">
+                        #{order.id} · {order.firstName} {order.lastName}
+                      </p>
+                      <p className="text-sm text-ink-soft">
+                        {order.city} · {order.address}
+                      </p>
+                      <p className="text-xs text-ink-soft">
+                        {new Date(order.createdAtUtc).toLocaleString()}
+                      </p>
+                    </div>
+                    <p className="font-display text-xl">
+                      {formatPrice(order.totalAmount)}
+                    </p>
+                  </button>
+
+                  {expanded && (
+                    <div className="mt-3 space-y-2 bg-mist/40 p-3 text-sm">
+                      <p>
+                        <span className="text-ink-soft">Personal number:</span>{" "}
+                        {order.personalNumber}
+                      </p>
+                      <p>
+                        <span className="text-ink-soft">Address:</span>{" "}
+                        {order.address}, {order.city}
+                      </p>
+                      {order.comment && (
+                        <p>
+                          <span className="text-ink-soft">Comment:</span>{" "}
+                          {order.comment}
+                        </p>
+                      )}
+                      <ul className="mt-2 space-y-1 border-t border-line/60 pt-2">
+                        {order.items.map((item) => (
+                          <li key={item.id} className="flex justify-between gap-3">
+                            <span>
+                              {item.productName}
+                              {[item.size, item.color].filter(Boolean).length > 0
+                                ? ` (${[item.size, item.color].filter(Boolean).join(" / ")})`
+                                : ""}{" "}
+                              × {item.quantity}
+                            </span>
+                            <span>
+                              {formatPrice(item.unitPrice * item.quantity)}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       {tab === "categories" && (
         <section className="grid gap-10 lg:grid-cols-[1fr_1.2fr]">
