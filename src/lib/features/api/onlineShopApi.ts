@@ -3,8 +3,10 @@ import { getAdminPassword } from "@/lib/adminAuth";
 import type {
   CategoryDto,
   CreateCategoryDto,
+  CreateOrderDto,
   CreateProductDto,
   GetProductsParams,
+  OrderDto,
   PagedProductsDto,
   ProductDto,
   UpdateCategoryDto,
@@ -118,6 +120,13 @@ export const onlineShopApi = createApi({
         { type: "Products", id: "LIST" },
       ],
     }),
+    createOrder: builder.mutation<OrderDto, CreateOrderDto>({
+      query: (body) => ({
+        url: "/api/orders",
+        method: "POST",
+        body,
+      }),
+    }),
   }),
 });
 
@@ -132,4 +141,5 @@ export const {
   useCreateProductMutation,
   useUpdateProductMutation,
   useDeleteProductMutation,
+  useCreateOrderMutation,
 } = onlineShopApi;

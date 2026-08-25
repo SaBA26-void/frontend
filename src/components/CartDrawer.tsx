@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { CartItemRow } from "@/components/CartItemRow";
 import { selectCartItems, selectCartTotal } from "@/lib/features/cart/cartSlice";
 import { useAppSelector } from "@/lib/hooks";
@@ -61,13 +62,23 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
             <span className="uppercase tracking-[0.12em] text-ink-soft">Total</span>
             <span className="font-display text-xl">{formatPrice(total)}</span>
           </div>
-          <button
-            type="button"
-            disabled={items.length === 0}
-            className="w-full bg-ink px-4 py-3 text-sm uppercase tracking-[0.14em] text-paper transition hover:bg-moss disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Checkout soon
-          </button>
+          {items.length === 0 ? (
+            <button
+              type="button"
+              disabled
+              className="w-full bg-ink px-4 py-3 text-sm uppercase tracking-[0.14em] text-paper opacity-40"
+            >
+              Checkout
+            </button>
+          ) : (
+            <Link
+              href="/checkout"
+              onClick={onClose}
+              className="block w-full bg-ink px-4 py-3 text-center text-sm uppercase tracking-[0.14em] text-paper transition hover:bg-moss"
+            >
+              Checkout
+            </Link>
+          )}
         </div>
       </aside>
     </>

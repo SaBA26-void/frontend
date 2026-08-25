@@ -73,3 +73,47 @@ export interface GetProductsParams {
   page?: number;
   pageSize?: number;
 }
+
+export interface CreateOrderItemDto {
+  productId: number;
+  variantId?: number | null;
+  productName: string;
+  size?: string | null;
+  color?: string | null;
+  unitPrice: number;
+  quantity: number;
+}
+
+export interface CreateOrderDto {
+  firstName: string;
+  lastName: string;
+  personalNumber: string;
+  address: string;
+  city: string;
+  comment?: string | null;
+  items: CreateOrderItemDto[];
+}
+
+export interface OrderItemDto {
+  id: number;
+  productId: number;
+  variantId: number | null;
+  productName: string;
+  size: string | null;
+  color: string | null;
+  unitPrice: number;
+  quantity: number;
+}
+
+export interface OrderDto {
+  id: number;
+  firstName: string;
+  lastName: string;
+  personalNumber: string;
+  address: string;
+  city: string;
+  comment: string | null;
+  totalAmount: number;
+  createdAtUtc: string;
+  items: OrderItemDto[];
+}
