@@ -46,6 +46,13 @@ export const onlineShopApi = createApi({
       }),
       invalidatesTags: ["Orders"],
     }),
+    deleteOrder: builder.mutation<void, number>({
+      query: (id) => ({
+        url: `/api/orders/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Orders"],
+    }),
     getCategories: builder.query<CategoryDto[], void>({
       query: () => "/api/categories",
       providesTags: ["Categories"],
@@ -139,6 +146,7 @@ export const {
   useLoginAdminMutation,
   useGetOrdersQuery,
   useCreateOrderMutation,
+  useDeleteOrderMutation,
   useGetCategoriesQuery,
   useCreateCategoryMutation,
   useUpdateCategoryMutation,

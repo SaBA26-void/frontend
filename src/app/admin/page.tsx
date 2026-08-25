@@ -10,6 +10,7 @@ import {
   useCreateCategoryMutation,
   useCreateProductMutation,
   useDeleteCategoryMutation,
+  useDeleteOrderMutation,
   useDeleteProductMutation,
   useGetCategoriesQuery,
   useGetOrdersQuery,
@@ -67,6 +68,7 @@ export default function AdminPage() {
 
   const [createCategory, { isLoading: creatingCategory }] = useCreateCategoryMutation();
   const [deleteCategory] = useDeleteCategoryMutation();
+  const [deleteOrder] = useDeleteOrderMutation();
   const [createProduct, { isLoading: creatingProduct }] = useCreateProductMutation();
   const [updateProduct, { isLoading: updatingProduct }] = useUpdateProductMutation();
   const [deleteProduct] = useDeleteProductMutation();
@@ -126,6 +128,19 @@ export default function AdminPage() {
       setMessage("Category deleted.");
     } catch {
       setMessage("Could not delete category. Remove children/products first.");
+    }
+  };
+
+  const handleDeleteOrder = async (id: number, customerName: string) => {
+    if (!window.confirm(`Delete order #${id} for ${customerName}?`)) return;
+    setMessage(null);
+
+    try {
+      await deleteOrder(id).unwrap();
+      if (expandedOrderId === id) setExpandedOrderId(null);
+      setMessage(`Order #${id} deleted.`);
+    } catch {
+      setMessage("Could not delete order.");
     }
   };
 
@@ -307,14 +322,14 @@ export default function AdminPage() {
               const expanded = expandedOrderId === order.id;
               return (
                 <li key={order.id} className="border-b border-line/70 pb-4">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExpandedOrderId(expanded ? null : order.id)
-                    }
-                    className="flex w-full flex-wrap items-start justify-between gap-3 text-left"
-                  >
-                    <div>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedOrderId(expanded ? null : order.id)
+                      }
+                      className="min-w-0 flex-1 text-left"
+                    >
                       <p className="font-medium">
                         #{order.id} · {order.firstName} {order.lastName}
                       </p>
@@ -324,11 +339,25 @@ export default function AdminPage() {
                       <p className="text-xs text-ink-soft">
                         {new Date(order.createdAtUtc).toLocaleString()}
                       </p>
+                    </button>
+                    <div className="flex items-center gap-3">
+                      <p className="font-display text-xl">
+                        {formatPrice(order.totalAmount)}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleDeleteOrder(
+                            order.id,
+                            `${order.firstName} ${order.lastName}`,
+                          )
+                        }
+                        className="text-xs uppercase tracking-[0.12em] text-ink-soft hover:text-danger"
+                      >
+                        Delete
+                      </button>
                     </div>
-                    <p className="font-display text-xl">
-                      {formatPrice(order.totalAmount)}
-                    </p>
-                  </button>
+                  </div>
 
                   {expanded && (
                     <div className="mt-3 space-y-2 bg-mist/40 p-3 text-sm">
