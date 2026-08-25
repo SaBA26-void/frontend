@@ -57,6 +57,12 @@ export function SiteHeader() {
           </nav>
 
           <div className="flex items-center gap-2">
+            <Link
+              href="/admin"
+              className="px-3 py-2 text-sm uppercase tracking-[0.12em] text-ink-soft transition hover:text-ink"
+            >
+              Admin
+            </Link>
             <button
               type="button"
               onClick={() => setCartOpen(true)}

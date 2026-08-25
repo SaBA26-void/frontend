@@ -31,3 +31,23 @@ export function flattenCategories(categories: CategoryDto[]): CategoryDto[] {
     ...flattenCategories(category.children),
   ]);
 }
+
+export interface FlatCategoryOption {
+  id: number;
+  label: string;
+  depth: number;
+}
+
+export function flattenCategoryOptions(
+  categories: CategoryDto[],
+  depth = 0,
+): FlatCategoryOption[] {
+  return categories.flatMap((category) => [
+    {
+      id: category.id,
+      label: `${"— ".repeat(depth)}${category.name}`,
+      depth,
+    },
+    ...flattenCategoryOptions(category.children, depth + 1),
+  ]);
+}

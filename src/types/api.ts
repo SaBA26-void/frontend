@@ -6,6 +6,19 @@ export interface CategoryDto {
   children: CategoryDto[];
 }
 
+export interface ProductVariantDto {
+  id: number;
+  size: string | null;
+  color: string | null;
+  stockQuantity: number;
+}
+
+export interface ProductVariantInputDto {
+  size?: string | null;
+  color?: string | null;
+  stockQuantity: number;
+}
+
 export interface ProductDto {
   id: number;
   name: string;
@@ -15,6 +28,7 @@ export interface ProductDto {
   categoryId: number;
   categoryName: string;
   imageUrl: string;
+  variants: ProductVariantDto[];
 }
 
 export interface PagedProductsDto {
@@ -31,6 +45,7 @@ export interface CreateProductDto {
   stockQuantity: number;
   categoryId: number;
   imageUrl: string;
+  variants: ProductVariantInputDto[];
 }
 
 export interface UpdateProductDto {
@@ -40,6 +55,17 @@ export interface UpdateProductDto {
   stockQuantity: number;
   categoryId: number;
   imageUrl: string;
+  variants: ProductVariantInputDto[];
+}
+
+export interface CreateCategoryDto {
+  name: string;
+  parentCategoryId?: number | null;
+}
+
+export interface UpdateCategoryDto {
+  name: string;
+  parentCategoryId?: number | null;
 }
 
 export interface GetProductsParams {

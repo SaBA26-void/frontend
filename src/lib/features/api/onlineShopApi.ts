@@ -1,10 +1,13 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { getAdminPassword } from "@/lib/adminAuth";
 import type {
   CategoryDto,
+  CreateCategoryDto,
   CreateProductDto,
   GetProductsParams,
   PagedProductsDto,
   ProductDto,
+  UpdateCategoryDto,
   UpdateProductDto,
 } from "@/types/api";
 
@@ -12,12 +15,52 @@ export const onlineShopApi = createApi({
   reducerPath: "onlineShopApi",
   baseQuery: fetchBaseQuery({
     baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
+    prepareHeaders: (headers) => {
+      const password = getAdminPassword();
+      if (password) {
+        headers.set("X-Admin-Password", password);
+      }
+      return headers;
+    },
   }),
   tagTypes: ["Categories", "Products", "Product"],
   endpoints: (builder) => ({
+    loginAdmin: builder.mutation<{ message: string }, { password: string }>({
+      query: (body) => ({
+        url: "/api/admin/login",
+        method: "POST",
+        body,
+      }),
+    }),
     getCategories: builder.query<CategoryDto[], void>({
       query: () => "/api/categories",
       providesTags: ["Categories"],
+    }),
+    createCategory: builder.mutation<CategoryDto, CreateCategoryDto>({
+      query: (body) => ({
+        url: "/api/categories",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Categories"],
+    }),
+    updateCategory: builder.mutation<
+      CategoryDto,
+      { id: number; body: UpdateCategoryDto }
+    >({
+      query: ({ id, body }) => ({
+        url: `/api/categories/${id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Categories"],
+    }),
+    deleteCategory: builder.mutation<void, number>({
+      query: (id) => ({
+        url: `/api/categories/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Categories"],
     }),
     getProducts: builder.query<PagedProductsDto, GetProductsParams | void>({
       query: (params) => {
@@ -79,7 +122,11 @@ export const onlineShopApi = createApi({
 });
 
 export const {
+  useLoginAdminMutation,
   useGetCategoriesQuery,
+  useCreateCategoryMutation,
+  useUpdateCategoryMutation,
+  useDeleteCategoryMutation,
   useGetProductsQuery,
   useGetProductByIdQuery,
   useCreateProductMutation,

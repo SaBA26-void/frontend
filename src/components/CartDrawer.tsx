@@ -1,13 +1,8 @@
 "use client";
 
-import Image from "next/image";
-import {
-  removeFromCart,
-  selectCartItems,
-  selectCartTotal,
-  updateQuantity,
-} from "@/lib/features/cart/cartSlice";
-import { useAppDispatch, useAppSelector } from "@/lib/hooks";
+import { CartItemRow } from "@/components/CartItemRow";
+import { selectCartItems, selectCartTotal } from "@/lib/features/cart/cartSlice";
+import { useAppSelector } from "@/lib/hooks";
 import { formatPrice } from "@/lib/utils";
 
 interface CartDrawerProps {
@@ -16,7 +11,6 @@ interface CartDrawerProps {
 }
 
 export function CartDrawer({ open, onClose }: CartDrawerProps) {
-  const dispatch = useAppDispatch();
   const items = useAppSelector(selectCartItems);
   const total = useAppSelector(selectCartTotal);
 
@@ -53,61 +47,10 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
           ) : (
             <ul className="space-y-5">
               {items.map((item) => (
-                <li key={item.productId} className="flex gap-3">
-                  <div className="relative h-20 w-16 shrink-0 overflow-hidden bg-mist">
-                    <Image
-                      src={item.imageUrl}
-                      alt={item.name}
-                      fill
-                      sizes="64px"
-                      className="object-cover"
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{item.name}</p>
-                    <p className="text-sm text-ink-soft">{formatPrice(item.price)}</p>
-                    <div className="mt-2 flex items-center gap-2">
-                      <button
-                        type="button"
-                        className="h-7 w-7 border border-line text-sm hover:border-ink"
-                        onClick={() =>
-                          dispatch(
-                            updateQuantity({
-                              productId: item.productId,
-                              quantity: item.quantity - 1,
-                            }),
-                          )
-                        }
-                        aria-label={`Decrease quantity of ${item.name}`}
-                      >
-                        −
-                      </button>
-                      <span className="w-6 text-center text-sm">{item.quantity}</span>
-                      <button
-                        type="button"
-                        className="h-7 w-7 border border-line text-sm hover:border-ink"
-                        onClick={() =>
-                          dispatch(
-                            updateQuantity({
-                              productId: item.productId,
-                              quantity: item.quantity + 1,
-                            }),
-                          )
-                        }
-                        aria-label={`Increase quantity of ${item.name}`}
-                      >
-                        +
-                      </button>
-                      <button
-                        type="button"
-                        className="ml-auto text-xs uppercase tracking-[0.12em] text-ink-soft hover:text-danger"
-                        onClick={() => dispatch(removeFromCart(item.productId))}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                </li>
+                <CartItemRow
+                  key={`${item.productId}-${item.variantId ?? "base"}`}
+                  item={item}
+                />
               ))}
             </ul>
           )}
