@@ -21,6 +21,18 @@ const emptyForm = {
   comment: "",
 };
 
+/** Letters, spaces, hyphens, apostrophes — no digits. */
+const NAME_PATTERN = /^[\p{L}][\p{L}\s\-']*$/u;
+
+function sanitizeNameInput(value: string) {
+  return value.replace(/[0-9]/g, "");
+}
+
+function isValidPersonName(value: string) {
+  const trimmed = value.trim();
+  return trimmed.length > 0 && NAME_PATTERN.test(trimmed);
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -35,12 +47,22 @@ export default function CheckoutPage() {
     [form.personalNumber],
   );
 
+  const namesValid = useMemo(
+    () => isValidPersonName(form.firstName) && isValidPersonName(form.lastName),
+    [form.firstName, form.lastName],
+  );
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
 
     if (items.length === 0) {
       setError("Your cart is empty.");
+      return;
+    }
+
+    if (!isValidPersonName(form.firstName) || !isValidPersonName(form.lastName)) {
+      setError("First and last name must use letters only (no numbers).");
       return;
     }
 
@@ -101,22 +123,32 @@ export default function CheckoutPage() {
               <span className="mb-1 block text-ink-soft">First name</span>
               <input
                 required
+                autoComplete="given-name"
                 value={form.firstName}
                 onChange={(event) =>
-                  setForm((prev) => ({ ...prev, firstName: event.target.value }))
+                  setForm((prev) => ({
+                    ...prev,
+                    firstName: sanitizeNameInput(event.target.value),
+                  }))
                 }
                 className="w-full border border-line bg-paper px-3 py-2 outline-none focus:border-ink"
+                placeholder="Letters only"
               />
             </label>
             <label className="block text-sm">
               <span className="mb-1 block text-ink-soft">Last name</span>
               <input
                 required
+                autoComplete="family-name"
                 value={form.lastName}
                 onChange={(event) =>
-                  setForm((prev) => ({ ...prev, lastName: event.target.value }))
+                  setForm((prev) => ({
+                    ...prev,
+                    lastName: sanitizeNameInput(event.target.value),
+                  }))
                 }
                 className="w-full border border-line bg-paper px-3 py-2 outline-none focus:border-ink"
+                placeholder="Letters only"
               />
             </label>
           </div>
@@ -180,7 +212,7 @@ export default function CheckoutPage() {
 
           <button
             type="submit"
-            disabled={isLoading || !personalNumberValid}
+            disabled={isLoading || !personalNumberValid || !namesValid}
             className="bg-ink px-6 py-3 text-sm uppercase tracking-[0.14em] text-paper transition hover:bg-moss disabled:cursor-not-allowed disabled:opacity-40"
           >
             {isLoading ? "Placing order…" : "Place order"}
