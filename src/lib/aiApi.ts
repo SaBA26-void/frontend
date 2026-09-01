@@ -8,14 +8,6 @@ import type {
   AiProductAssistResponse,
 } from "@/types/ai";
 
-function getAiBaseUrl(): string {
-  const baseUrl = process.env.NEXT_PUBLIC_AI_API_BASE_URL?.replace(/\/$/, "");
-  if (!baseUrl) {
-    throw new Error("AI service is not configured (NEXT_PUBLIC_AI_API_BASE_URL).");
-  }
-  return baseUrl;
-}
-
 async function parseError(response: Response): Promise<string> {
   try {
     const data = (await response.json()) as { detail?: string | { msg?: string }[] };
@@ -36,7 +28,7 @@ export async function sendShopChat(messages: AiChatMessage[]): Promise<AiChatRes
   const timeout = setTimeout(() => controller.abort(), 180_000);
 
   try {
-    const response = await fetch(`${getAiBaseUrl()}/api/chat/shop`, {
+    const response = await fetch("/api/ai/chat/shop", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ messages }),
@@ -55,9 +47,7 @@ export async function sendShopChat(messages: AiChatMessage[]): Promise<AiChatRes
       );
     }
     if (err instanceof TypeError) {
-      throw new Error(
-        "Could not reach the AI service. Check CORS / NEXT_PUBLIC_AI_API_BASE_URL, or the model may need re-downloading on Railway.",
-      );
+      throw new Error("Could not reach the shop. Check your connection and try again.");
     }
     throw err;
   } finally {
@@ -71,7 +61,7 @@ async function postAdminAssist<T>(path: string, body: AiAssistRequest): Promise<
     throw new Error("Admin password is required.");
   }
 
-  const response = await fetch(`${getAiBaseUrl()}${path}`, {
+  const response = await fetch(path, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -88,15 +78,15 @@ async function postAdminAssist<T>(path: string, body: AiAssistRequest): Promise<
 }
 
 export function requestProductDraft(prompt: string): Promise<AiProductAssistResponse> {
-  return postAdminAssist<AiProductAssistResponse>("/api/assist/product-draft", { prompt });
+  return postAdminAssist<AiProductAssistResponse>("/api/ai/assist/product-draft", { prompt });
 }
 
 export function requestCategoryDraft(prompt: string): Promise<AiCategoryAssistResponse> {
-  return postAdminAssist<AiCategoryAssistResponse>("/api/assist/category-draft", { prompt });
+  return postAdminAssist<AiCategoryAssistResponse>("/api/ai/assist/category-draft", { prompt });
 }
 
 export function requestOrderQuery(prompt: string): Promise<AiOrderAssistResponse> {
-  return postAdminAssist<AiOrderAssistResponse>("/api/assist/order-query", { prompt });
+  return postAdminAssist<AiOrderAssistResponse>("/api/ai/assist/order-query", { prompt });
 }
 
 export function isAiServiceConfigured(): boolean {
