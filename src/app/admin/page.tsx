@@ -1,6 +1,13 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { AdminCopilotBox } from "@/components/AdminCopilotBox";
+import {
+  isAiServiceConfigured,
+  requestCategoryDraft,
+  requestOrderQuery,
+  requestProductDraft,
+} from "@/lib/aiApi";
 import {
   clearAdminPassword,
   isAdminAuthenticated,
@@ -283,6 +290,78 @@ export default function AdminPage() {
     }
   };
 
+  const aiEnabled = isAiServiceConfigured();
+
+  const handleProductCopilot = async (prompt: string) => {
+    const result = await requestProductDraft(prompt);
+    if (!result.draft) {
+      throw new Error(result.message || "No product draft was returned.");
+    }
+
+    setEditingProductId(null);
+    setProductForm({
+      name: result.draft.name,
+      description: result.draft.description,
+      price: result.draft.price > 0 ? String(result.draft.price) : "",
+      stockQuantity: String(result.draft.stockQuantity),
+      categoryId: result.draft.categoryId > 0 ? String(result.draft.categoryId) : "",
+      imageUrl: result.draft.imageUrl || emptyProductForm.imageUrl,
+    });
+    setVariants(
+      result.draft.variants.map((variant) => ({
+        size: variant.size ?? "",
+        color: variant.color ?? "",
+        stockQuantity: variant.stockQuantity,
+      })),
+    );
+    setMessage("AI draft applied — review the form and click Create product to save.");
+
+    return {
+      message: result.message,
+      warnings: result.warnings,
+      missing: result.missing,
+    };
+  };
+
+  const handleCategoryCopilot = async (prompt: string) => {
+    const result = await requestCategoryDraft(prompt);
+    if (!result.draft) {
+      throw new Error(result.message || "No category draft was returned.");
+    }
+
+    setCategoryName(result.draft.name);
+    setParentCategoryId(
+      result.draft.parentCategoryId != null ? String(result.draft.parentCategoryId) : "",
+    );
+    setMessage("AI draft applied — review the form and click Add category to save.");
+
+    return {
+      message: result.message,
+      warnings: result.warnings,
+      missing: result.missing,
+    };
+  };
+
+  const handleOrderCopilot = async (prompt: string) => {
+    const result = await requestOrderQuery(prompt);
+    const filters = result.filters;
+
+    if (filters.search) setOrderSearch(filters.search);
+    if (filters.city) setOrderCity(filters.city);
+    if (filters.minTotal != null && !Number.isNaN(filters.minTotal)) {
+      setOrderMinTotal(String(filters.minTotal));
+    }
+    if (filters.maxTotal != null && !Number.isNaN(filters.maxTotal)) {
+      setOrderMaxTotal(String(filters.maxTotal));
+    }
+
+    return {
+      message: result.message,
+      warnings: result.warnings,
+      missing: result.missing,
+    };
+  };
+
   if (!authed) {
     return (
       <main className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-16">
@@ -369,6 +448,16 @@ export default function AdminPage() {
               Refresh
             </button>
           </div>
+
+          {aiEnabled && (
+            <AdminCopilotBox
+              title="Order assistant"
+              description="Describe which orders to find — filters will be applied below. Nothing is deleted automatically."
+              placeholder='e.g. "Orders from Tbilisi over $100" or "Find orders for Smith"'
+              buttonLabel="Apply filters"
+              onGenerate={handleOrderCopilot}
+            />
+          )}
 
           <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <label className="block text-sm sm:col-span-2 lg:col-span-1">
@@ -524,6 +613,16 @@ export default function AdminPage() {
             <p className="text-sm text-ink-soft">
               Leave parent empty for a top-level category, or pick a parent for a subcategory.
             </p>
+
+            {aiEnabled && (
+              <AdminCopilotBox
+                title="Category copilot"
+                description="Describe a category in plain language. The form below will be prefilled — you still click Add category to save."
+                placeholder='e.g. "Subcategory Accessories under Electronics"'
+                onGenerate={handleCategoryCopilot}
+              />
+            )}
+
             <label className="block text-sm">
               <span className="mb-1 block text-ink-soft">Name</span>
               <input
@@ -599,6 +698,15 @@ export default function AdminPage() {
                 </button>
               )}
             </div>
+
+            {aiEnabled && (
+              <AdminCopilotBox
+                title="Product copilot"
+                description="Describe a product in plain language. The form below will be prefilled — you still click Create product to save."
+                placeholder='e.g. "Black cotton T-shirt in Men, sizes S M L XL, $29, 10 stock each"'
+                onGenerate={handleProductCopilot}
+              />
+            )}
 
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block text-sm md:col-span-2">
