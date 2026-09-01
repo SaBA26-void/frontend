@@ -137,7 +137,7 @@ export function ChatWidget() {
             ))}
             {loading && (
               <p className="text-sm text-ink-soft" aria-live="polite">
-                Thinking…
+                Thinking… This can take 1–3 minutes on the free AI server.
               </p>
             )}
           </div>

@@ -32,17 +32,37 @@ async function parseError(response: Response): Promise<string> {
 }
 
 export async function sendShopChat(messages: AiChatMessage[]): Promise<AiChatResponse> {
-  const response = await fetch(`${getAiBaseUrl()}/api/chat/shop`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages }),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 180_000);
 
-  if (!response.ok) {
-    throw new Error(await parseError(response));
+  try {
+    const response = await fetch(`${getAiBaseUrl()}/api/chat/shop`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(await parseError(response));
+    }
+
+    return response.json() as Promise<AiChatResponse>;
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error(
+        "The AI is taking too long to respond (limited server CPU). Try a shorter question or ask again.",
+      );
+    }
+    if (err instanceof TypeError) {
+      throw new Error(
+        "Could not reach the AI service. Check CORS / NEXT_PUBLIC_AI_API_BASE_URL, or the model may need re-downloading on Railway.",
+      );
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  return response.json() as Promise<AiChatResponse>;
 }
 
 async function postAdminAssist<T>(path: string, body: AiAssistRequest): Promise<T> {
