@@ -1,3 +1,4 @@
+import { PublicChatWidget } from "@/components/PublicChatWidget";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 
@@ -7,6 +8,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
       <SiteHeader />
       <div className="flex-1">{children}</div>
       <SiteFooter />
+      <PublicChatWidget />
     </div>
   );
 }
